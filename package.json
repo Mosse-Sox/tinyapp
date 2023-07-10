@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/Mosse-Sox/tinyapp/issues"
   },
-  "homepage": "https://github.com/Mosse-Sox/tinyapp#readme"
+  "homepage": "https://github.com/Mosse-Sox/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
 }
