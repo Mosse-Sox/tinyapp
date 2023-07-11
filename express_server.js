@@ -56,6 +56,14 @@ app.get("/u/:id", (req, res) => {
   res.redirect(templateVars.longURL);
 });
 
+app.post("/urls/:id/delete", (req, res) => {
+  // console.log(req.params.id);
+  delete urlDatabase[req.params.id];
+
+
+  res.redirect("/urls");
+});
+
 app.listen(PORT, () => {
   console.log(`Tiny App listening on port ${PORT}`);
 });
