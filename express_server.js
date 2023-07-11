@@ -33,7 +33,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body);
+  // console.log(req.body);
   const randomID = generateRandomString();
 
   urlDatabase[randomID] = req.body.longURL;
@@ -57,11 +57,16 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-  // console.log(req.params.id);
+  console.log(req.params.id);
   delete urlDatabase[req.params.id];
 
-
   res.redirect("/urls");
+});
+
+app.post("/urls/:id/update", (req, res) => {
+  // console.log(req.params.id);
+  urlDatabase[req.params.id] = req.body.newURL;
+  res.redirect(`/urls/${req.params.id}`);
 });
 
 app.listen(PORT, () => {
