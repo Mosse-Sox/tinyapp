@@ -12,15 +12,17 @@ const urlDatabase = {
 };
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.redirect("/urls");
 });
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body> Hello <b>WORLD</b></body></html>\n");
+app.post("/login", (req, res) => {
+  const { username } = req.body;
+  res.cookie("username", username);
+  res.redirect("/urls");
 });
 
 app.get("/urls", (req, res) => {

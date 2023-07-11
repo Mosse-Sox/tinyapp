@@ -21,7 +21,7 @@
           Short URL Link:
           <a href="/u/<%= id %>">http://localhost:8080/u/<%= id %></a>
         </p>
-        <p class="card-text">Short URL ID: <a href="/urls"><%= id %></a></p>
+        <p class="card-text">Short URL ID: <a href="/urls"><%- id %></a></p>
       </div>
       <div class="card-footer text-muted">
         <form method="POST" action="/urls/<%= id %>/update">
