@@ -34,7 +34,10 @@ app.get("/urls/new", (req, res) => {
 
 app.post("/urls", (req, res) => {
   console.log(req.body);
-  res.send("Ok");
+  const randomID = generateRandomString();
+
+  urlDatabase[randomID] = req.body.longURL;
+  res.redirect(`/urls/:${randomID}`);
 });
 
 app.get("/urls/:id", (req, res) => {
@@ -45,17 +48,22 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
+app.get("/u/:id", (req, res) => {
+  const templateVars = {
+    id: req.params.id,
+    longURL: urlDatabase[req.params.id],
+  };
+  res.redirect(templateVars.longURL);
+});
+
 app.listen(PORT, () => {
   console.log(`Tiny App listening on port ${PORT}`);
 });
 
-
-
-
 const generateRandomString = () => {
-  let newString = ''; 
-  
-  const characters = 'ABCDEFGHIJKLMNOPQRXYZabcdefghijklmnopqrxyz0123456789';
+  let newString = "";
+
+  const characters = "ABCDEFGHIJKLMNOPQRXYZabcdefghijklmnopqrxyz0123456789";
 
   for (i = 0; i < 6; i++) {
     newString += characters[Math.floor(Math.random() * characters.length)];
@@ -63,4 +71,3 @@ const generateRandomString = () => {
 
   return newString;
 };
-
