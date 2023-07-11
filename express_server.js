@@ -48,3 +48,19 @@ app.get("/urls/:id", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Tiny App listening on port ${PORT}`);
 });
+
+
+
+
+const generateRandomString = () => {
+  let newString = ''; 
+  
+  const characters = 'ABCDEFGHIJKLMNOPQRXYZabcdefghijklmnopqrxyz0123456789';
+
+  for (i = 0; i < 6; i++) {
+    newString += characters[Math.floor(Math.random() * characters.length)];
+  }
+
+  return newString;
+};
+
