@@ -51,11 +51,7 @@ app.get("/", (req, res) => {
 
 // GET /register
 app.get("/register", (req, res) => {
-  const templateVars = {
-    user: userDatabase[req.cookies["user_id"]],
-  };
-
-  res.render("new_user", templateVars);
+  res.render("new_user");
 });
 
 /* --- >> POST /register << ---*/
@@ -77,8 +73,7 @@ app.post("/register", (req, res) => {
   const alreadyExists = userLookup(user.email);
   if (alreadyExists) {
     res.status(400);
-    res.send('Email already in use');
-    return;
+    return res.send("Email already in use");
   }
 
   /* create user in database and set a cookie */
@@ -92,8 +87,35 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+// GET /login
+app.get("/login", (req, res) => {
+  res.render("login_page");
+});
+
 // POST /login
 app.post("/login", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  /* check if either field is empty */
+  if (!email || !password) {
+    res.status(400);
+    return res.send("Empty field");
+  }
+
+  const userLookedup = userLookup(email);
+
+  if (!userLookedup) {
+    res.status(400);
+    return res.send("that email is not registered");
+  }
+
+  if (userLookedup.password !== password) {
+    res.status(400);
+    return res.send("that password is wrong");
+  }
+
+  res.cookie("user_id", userLookedup.id);
   res.redirect("/urls");
 });
 
