@@ -58,7 +58,7 @@ app.get("/register", (req, res) => {
   res.render("new_user", templateVars);
 });
 
-// POST /register
+/* --- >> POST /register << ---*/
 app.post("/register", (req, res) => {
   const userID = generateRandomString();
   const user = {
@@ -67,9 +67,22 @@ app.post("/register", (req, res) => {
     password: req.body.password,
   };
 
-  userDatabase[userID] = user;
+  /* check if either field is empty */
+  if (!user.email || !user.password) {
+    res.status(400);
+    return res.send("Empty field");
+  }
 
-  console.log(userDatabase);
+  /* check if users exists already */
+  const alreadyExists = userLookup(user.email);
+  if (alreadyExists) {
+    res.status(400);
+    res.send('Email already in use');
+    return;
+  }
+
+  /* create user in database and set a cookie */
+  userDatabase[userID] = user;
   res.cookie("user_id", userID);
   res.redirect("/urls");
 });
@@ -166,4 +179,21 @@ const generateRandomString = () => {
   }
 
   return newString;
+};
+
+const userLookup = (email) => {
+  let userExistsAlready = false;
+
+  for (const userId in userDatabase) {
+    const userThatExistsCurrently = userDatabase[userId];
+    if (userThatExistsCurrently.email === email) {
+      userExistsAlready = true;
+    }
+
+    if (userExistsAlready) {
+      return userThatExistsCurrently;
+    }
+  }
+
+  return null;
 };
