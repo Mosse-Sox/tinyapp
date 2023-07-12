@@ -1,4 +1,4 @@
-/** 
+/**
  * This file contains all the current routes and server code.
  * You would run this file to start the server.
  * Variables:
@@ -33,12 +33,12 @@ const urlDatabase = {
 // object acting as the current user database
 const userDatabase = {
   aay: {
-    name: "Rowan",
+    id: "Rowan",
     email: "abc@abc.com",
     password: "jamjam",
   },
   bee: {
-    name: "Donavon",
+    id: "Donavon",
     email: "deh@jam.ca",
     password: "Rowan",
   },
@@ -52,7 +52,7 @@ app.get("/", (req, res) => {
 // GET /register
 app.get("/register", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    user: userDatabase[req.cookies["user_id"]],
   };
 
   res.render("new_user", templateVars);
@@ -60,14 +60,17 @@ app.get("/register", (req, res) => {
 
 // POST /register
 app.post("/register", (req, res) => {
+  const userID = generateRandomString();
   const user = {
+    id: userID,
     email: req.body.email,
     password: req.body.password,
   };
 
-  const userID = generateRandomString();
-
   userDatabase[userID] = user;
+
+  console.log(userDatabase);
+  res.cookie("user_id", userID);
   res.redirect("/urls");
 });
 
@@ -78,26 +81,26 @@ app.get("/urls.json", (req, res) => {
 
 // POST /login
 app.post("/login", (req, res) => {
-  const { username } = req.body;
-  res.cookie("username", username);
   res.redirect("/urls");
 });
 
 // POST /logout
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
 // GET /urls
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase, username: req.cookies["username"] };
+  const userID = req.cookies["user_id"];
+  const templateVars = { urls: urlDatabase, user: userDatabase[userID] };
+
   res.render("urls_index", templateVars);
 });
 
 // GET /urls/new
 app.get("/urls/new", (req, res) => {
-  const templateVars = { username: req.cookies["username"] };
+  const templateVars = { user: userDatabase[req.cookies["user_id"]] };
   res.render("urls_new", templateVars);
 });
 
@@ -115,7 +118,7 @@ app.get("/urls/:id", (req, res) => {
   const templateVars = {
     id: req.params.id,
     longURL: urlDatabase[req.params.id],
-    username: req.cookies["username"],
+    user: userDatabase[req.cookies["user_id"]],
   };
   res.render("urls_show", templateVars);
 });
