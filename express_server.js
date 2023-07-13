@@ -8,7 +8,7 @@
  */
 
 const express = require("express");
-const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session");
 const morgan = require("morgan");
 const bcrypt = require("bcryptjs");
 
@@ -19,8 +19,37 @@ const PORT = 8080;
 
 /* Middleware */
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+
+app.use(
+  cookieSession({
+    name: "session",
+    keys: ["user_id"],
+
+    maxAge: 24 * 60 * 60 * 1000,
+  })
+);
+
 app.use(morgan("dev"));
+
+app.use((req, res, next) => {
+  const protectedRoutes = [
+    "/urls",
+    "/urls/new",
+    "/urls/:id",
+    "/urls/:id/update",
+    "/urls/:id/delete",
+  ];
+
+  console.log(req.session.id);
+  const idFromCookie = req.session.id;
+  const userLookedup = userLookup(userDatabase[idFromCookie].email);
+  console.log(userLookedup);
+  if (!userLookedup && protectedRoutes.includes(req.url)) {
+    res.redirect("/");
+  }
+
+  next();
+});
 
 /* configs */
 app.set("view engine", "ejs");
@@ -38,13 +67,92 @@ const userDatabase = {
   Rowan: {
     id: "Rowan",
     email: "Rowan@abc.com",
-    password: bcrypt.hashSync("jamjam", 10)
+    password: bcrypt.hashSync("jamjam", 10),
   },
   Donny: {
     id: "Donny",
     email: "Scootydon@jam.ca",
-    password: bcrypt.hashSync("Rowan", 10)
+    password: bcrypt.hashSync("Rowan", 10),
   },
+};
+
+/* -------------------------------------- Functions ------------------------------------------ */
+
+/**
+ * This function is used in generating new shortURLS and userIds
+ * @returns a randomly generated 6 character alphanumeric string
+ */
+const generateRandomString = () => {
+  let newString = "";
+
+  const characters = "ABCDEFGHIJKLMNOPQRXYZabcdefghijklmnopqrxyz0123456789";
+
+  for (i = 0; i < 6; i++) {
+    newString += characters[Math.floor(Math.random() * characters.length)];
+  }
+
+  return newString;
+};
+
+/**
+ * This function takes an email and checks the database for that email
+ * @param {string} email
+ * @returns a user if its found, null if no user is found
+ */
+const userLookup = (email) => {
+  let userExistsAlready = false;
+
+  for (const userId in userDatabase) {
+    const userThatExistsCurrently = userDatabase[userId];
+    if (userThatExistsCurrently.email === email) {
+      userExistsAlready = true;
+    }
+
+    if (userExistsAlready) {
+      return userThatExistsCurrently;
+    }
+  }
+
+  return null;
+};
+
+/**
+ * This function takes a userID and creates an object containing all the urls for that userID
+ * @param {string} userID
+ * @returns an object that contains all of the urls associated with a specific user
+ */
+const urlsForUser = (userID) => {
+  const urls = {};
+
+  for (const shortURL in urlDatabase) {
+    if (urlDatabase[shortURL].userID === userID) {
+      urls[shortURL] = urlDatabase[shortURL];
+    }
+  }
+
+  return urls;
+};
+
+/**
+ * This function takes in an email and password that a user attempted to log in with and returns
+ * an object with an error if the login was not successful or an object that contains the user object.
+ * @param {string} email email the user is attempting to log in with
+ * @param {string} password password the user is attempting to log in with
+ * @returns An object that contains either a user or an error depending on if the params passed
+ * the checks.
+ */
+const authenticateUser = (email, password) => {
+  const userLookedup = userLookup(email);
+
+  if (!userLookedup) {
+    return { error: "Login unsuccessful", user: null };
+  }
+
+  if (!bcrypt.compareSync(password, userLookedup.password)) {
+    return { error: "Login unsuccessful", user: null };
+  }
+
+  return { error: null, user: userLookedup };
 };
 
 /* --------------------------------------  Login Routes   ------------------------------------------ */
@@ -53,33 +161,29 @@ const userDatabase = {
 
 /* Get */
 app.get("/", (req, res) => {
-  if (req.cookies["user_id"]) {
-    res.redirect("/urls");
-    return;
+  if (req.session.id) {
+    return res.redirect("/urls");
   }
 
-  res.redirect("/login");
-  return;
+  return res.redirect("/login");
 });
 
 /* GET /register */
 app.get("/register", (req, res) => {
-  if (req.cookies["user_id"]) {
-    res.redirect("/urls");
-    return;
+  if (req.session.id) {
+    return res.redirect("/urls");
   }
 
-  res.render("new_user");
+  return res.render("new_user");
 });
 
 /* GET /login */
 app.get("/login", (req, res) => {
-  if (req.cookies["user_id"]) {
-    res.redirect("/urls");
-    return;
+  if (req.session.id) {
+    return res.redirect("/urls");
   }
 
-  res.render("login_page");
+  return res.render("login_page");
 });
 
 /* ------------------ >> POSTS << ------------------ */
@@ -90,29 +194,26 @@ app.post("/register", (req, res) => {
   const user = {
     id: userID,
     email: req.body.email,
-    password: bcrypt.hashSync(req.body.password, 10)
+    password: bcrypt.hashSync(req.body.password, 10),
   };
 
   // check if either field is empty
   if (!user.email || !user.password) {
     res.status(400);
-    res.redirect("/register");
-    return;
+    return res.redirect("/register");
   }
 
   // check if users exists already
   const alreadyExists = userLookup(user.email);
   if (alreadyExists) {
     res.status(400);
-    res.redirect("/register");
-    return;
+    return res.redirect("/register");
   }
 
   // create user in database and set a cookie
   userDatabase[userID] = user;
-  res.cookie("user_id", userID);
-  res.redirect("/urls");
-  return;
+  req.session.id = userID;
+  return res.redirect("/urls");
 });
 
 /* --- >> POST /login << --- */
@@ -127,32 +228,22 @@ app.post("/login", (req, res) => {
     return;
   }
 
-  // checking if user exists
-  const userLookedup = userLookup(email);
-  if (!userLookedup) {
-    res.status(400);
-    res.redirect("/login");
-    return;
-  }
+  const { error, user } = authenticateUser(email, password);
 
-  // checking if password is correct
-  if (!bcrypt.compareSync(password, userLookedup.password)) {
-    res.status(400);
-    res.redirect("/login");
-    return;
+  if (error) {
+    return res.send(error);
   }
 
   // logging user in and giving them their cookies
-  res.cookie("user_id", userLookedup.id);
+  req.session.id = user.id;
   res.redirect("/urls");
   return;
 });
 
 /* POST /logout */
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
-  res.redirect("/login");
-  return;
+  res.session = null;
+  return res.redirect("/login");
 });
 
 /* --------------------------------------  General Routes   ------------------------------------------ */
@@ -161,32 +252,18 @@ app.post("/logout", (req, res) => {
 
 /* GET /urls */
 app.get("/urls", (req, res) => {
-  const user = req.cookies["user_id"];
+  const userId = req.session.id;
 
-   // checking if a user is logged in
-   if (!user) {
-    res.status(400);
-    res.redirect("/login");
-    return;
-  }
+  const urls = urlsForUser(userId);
 
-  const urls = urlsForUser(user);
+  const templateVars = { urls: urls, user: userDatabase[userId] };
 
-  const templateVars = { urls: urls, user: userDatabase[user] };
-
-  res.render("urls_index", templateVars);
+  return res.render("urls_index", templateVars);
 });
 
 /* GET /urls/new */
 app.get("/urls/new", (req, res) => {
-  const templateVars = { user: userDatabase[req.cookies["user_id"]] };
-
-  // checking if a user is logged in
-  if (!templateVars.user) {
-    res.status(400);
-    res.redirect("/login");
-    return;
-  }
+  const templateVars = { user: userDatabase[req.session.id] };
 
   res.render("urls_new", templateVars);
 });
@@ -194,14 +271,7 @@ app.get("/urls/new", (req, res) => {
 /* GET /urls/:id */
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
-  const user = req.cookies["user_id"];
-
-  // checking if a user is logged in
-  if (!user) {
-    res.status(400);
-    res.redirect("/login");
-    return;
-  }
+  const user = req.session.id;
 
   const urlsList = urlsForUser(userDatabase[user].id);
 
@@ -243,14 +313,7 @@ app.get("/u/:id", (req, res) => {
 /* POST /urls */
 app.post("/urls", (req, res) => {
   const randomID = generateRandomString();
-  const user = req.cookies["user_id"];
-
-  // checking if a user is logged in
-  if (!user) {
-    res.status(400);
-    res.redirect("/login");
-    return;
-  }
+  const user = req.session.id;
 
   const newURL = {
     longURL: req.body.longURL,
@@ -264,17 +327,10 @@ app.post("/urls", (req, res) => {
 
 /* POST /urls/:id/delete */
 app.post("/urls/:id/delete", (req, res) => {
-  const user = req.cookies["user_id"];
+  const user = req.session.id;
   const id = req.params.id;
 
-  // checking if a user is logged in
-  if (!user) {
-    res.status(400);
-    res.redirect("/login");
-    return;
-  }
-
-  const urlsList = urlsForUser(user.id);
+  const urlsList = urlsForUser(user);
   // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
     res.status(404);
@@ -289,15 +345,8 @@ app.post("/urls/:id/delete", (req, res) => {
 
 /* POST /urls/:id/update */
 app.post("/urls/:id/update", (req, res) => {
-  const user = req.cookies["user_id"];
+  const user = req.session.id;
   const id = req.params.id;
-
-  // checking if a user is logged in
-  if (!user) {
-    res.status(400);
-    res.redirect("/login");
-    return;
-  }
 
   const urlsList = urlsForUser(user);
   // checking if the id exists at all, and is visible to the current user
@@ -316,60 +365,3 @@ app.post("/urls/:id/update", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Tiny App listening on port ${PORT}`);
 });
-
-/* -------------------------------------- Functions ------------------------------------------ */
-
-/**
- * This function is used in generating new shortURLS and userIds
- * @returns a randomly generated 6 character alphanumeric string
- */
-const generateRandomString = () => {
-  let newString = "";
-
-  const characters = "ABCDEFGHIJKLMNOPQRXYZabcdefghijklmnopqrxyz0123456789";
-
-  for (i = 0; i < 6; i++) {
-    newString += characters[Math.floor(Math.random() * characters.length)];
-  }
-
-  return newString;
-};
-
-/**
- * This function takes an email and checks the database for that email
- * @param {*} email
- * @returns a user if its found, null if no user is found
- */
-const userLookup = (email) => {
-  let userExistsAlready = false;
-
-  for (const userId in userDatabase) {
-    const userThatExistsCurrently = userDatabase[userId];
-    if (userThatExistsCurrently.email === email) {
-      userExistsAlready = true;
-    }
-
-    if (userExistsAlready) {
-      return userThatExistsCurrently;
-    }
-  }
-
-  return null;
-};
-
-/**
- * This function takes a userID and creates an object containing all the urls for that userID
- * @param {*} userID
- * @returns an object that contains all of the urls associated with a specific user
- */
-const urlsForUser = (userID) => {
-  const urls = {};
-
-  for (const shortURL in urlDatabase) {
-    if (urlDatabase[shortURL].userID === userID) {
-      urls[shortURL] = urlDatabase[shortURL];
-    }
-  }
-
-  return urls;
-};
