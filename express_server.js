@@ -42,10 +42,15 @@ app.use((req, res, next) => {
 
   console.log(req.session.id);
   const idFromCookie = req.session.id;
-  const userLookedup = userLookup(userDatabase[idFromCookie].email);
-  console.log(userLookedup);
+
+  if (!idFromCookie && req.url !== "/login") {
+    return res.redirect("/login");
+  }
+
+  const userFromCookie = userDatabase[idFromCookie];
+  const userLookedup = userFromCookie ? userLookup(userFromCookie.email) : null;
   if (!userLookedup && protectedRoutes.includes(req.url)) {
-    res.redirect("/");
+    return res.redirect("/login");
   }
 
   next();
@@ -242,7 +247,7 @@ app.post("/login", (req, res) => {
 
 /* POST /logout */
 app.post("/logout", (req, res) => {
-  res.session = null;
+  res.clearCookie("session");
   return res.redirect("/login");
 });
 
