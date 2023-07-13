@@ -66,14 +66,14 @@ app.post("/register", (req, res) => {
   /* check if either field is empty */
   if (!user.email || !user.password) {
     res.status(400);
-    return res.send("Empty field");
+    res.redirect("/register");
   }
 
   /* check if users exists already */
   const alreadyExists = userLookup(user.email);
   if (alreadyExists) {
     res.status(400);
-    return res.send("Email already in use");
+    res.redirect("/register");
   }
 
   /* create user in database and set a cookie */
@@ -100,21 +100,23 @@ app.post("/login", (req, res) => {
   /* check if either field is empty */
   if (!email || !password) {
     res.status(400);
-    return res.send("Empty field");
+    res.redirect("/login");
   }
 
+  /* checking if user exists */
   const userLookedup = userLookup(email);
-
   if (!userLookedup) {
     res.status(400);
-    return res.send("that email is not registered");
+    res.redirect("/login");
   }
 
+  /* checking if password is correct */
   if (userLookedup.password !== password) {
     res.status(400);
-    return res.send("that password is wrong");
+    res.redirect("/login");
   }
 
+  /* logging user in and giving them their cookies */
   res.cookie("user_id", userLookedup.id);
   res.redirect("/urls");
 });
@@ -130,19 +132,34 @@ app.get("/urls", (req, res) => {
   const userID = req.cookies["user_id"];
   const templateVars = { urls: urlDatabase, user: userDatabase[userID] };
 
+  /* checking if a user is logged in */
+  if (!templateVars.user) {
+    res.redirect("/login");
+  }
+
   res.render("urls_index", templateVars);
 });
 
 // GET /urls/new
 app.get("/urls/new", (req, res) => {
   const templateVars = { user: userDatabase[req.cookies["user_id"]] };
+
+  /* checking if a user is logged in */
+  if (!templateVars.user) {
+    res.redirect("/login");
+  }
+
   res.render("urls_new", templateVars);
 });
 
 // POST /urls
 app.post("/urls", (req, res) => {
-  // console.log(req.body);
   const randomID = generateRandomString();
+  const user = req.cookies["user_id"];
+  /* checking if a user is logged in */
+  if (!user) {
+    res.redirect("/login");
+  }
 
   urlDatabase[randomID] = req.body.longURL;
   res.redirect(`/urls/:${randomID}`);
@@ -155,6 +172,12 @@ app.get("/urls/:id", (req, res) => {
     longURL: urlDatabase[req.params.id],
     user: userDatabase[req.cookies["user_id"]],
   };
+
+  /* checking if a user is logged in */
+  if (!templateVars.user) {
+    res.redirect("/login");
+  }
+
   res.render("urls_show", templateVars);
 });
 
@@ -164,6 +187,12 @@ app.get("/u/:id", (req, res) => {
     id: req.params.id,
     longURL: urlDatabase[req.params.id],
   };
+
+  if (!templateVars.longURL) {
+    res.status(404);
+    res.send("the url you are trying to access does not exist");
+  }
+
   res.redirect(templateVars.longURL);
 });
 
@@ -172,12 +201,23 @@ app.post("/urls/:id/delete", (req, res) => {
   console.log(req.params.id);
   delete urlDatabase[req.params.id];
 
+  const user = req.cookies["user_id"];
+  /* checking if a user is logged in */
+  if (!user) {
+    res.redirect("/login");
+  }
+
   res.redirect("/urls");
 });
 
 // POST /urls/:id/update
 app.post("/urls/:id/update", (req, res) => {
-  // console.log(req.params.id);
+  const user = req.cookies["user_id"];
+  /* checking if a user is logged in */
+  if (!user) {
+    res.redirect("/login");
+  }
+
   urlDatabase[req.params.id] = req.body.newURL;
   res.redirect(`/urls/${req.params.id}`);
 });
