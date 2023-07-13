@@ -16,23 +16,23 @@ const app = express();
 /*------- PORT -------*/
 const PORT = 8080;
 
-// Middleware
+/* Middleware */
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan("dev"));
 
-// configs
+/* configs */
 app.set("view engine", "ejs");
 
 /* --------------------------------------  Database Objects   ------------------------------------------ */
 
-// object acting as the current URL database
+/* object acting as the current URL database */
 const urlDatabase = {
   b2xVn2: { longURL: "http://www.lighthouselabs.ca", userID: "Rowan" },
   "9sm5xk": { longURL: "http://www.google.com", userID: "Donny" },
 };
 
-// object acting as the current user database
+/* object acting as the current user database */
 const userDatabase = {
   Rowan: {
     id: "Rowan",
@@ -48,13 +48,20 @@ const userDatabase = {
 
 /* --------------------------------------  Login Routes   ------------------------------------------ */
 
-// GET / -> redirects to /urls currently
+/* ------------------ >> GETS << ------------------ */
+
+/* Get */
 app.get("/", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect("/urls");
+    return;
+  }
+
   res.redirect("/login");
   return;
 });
 
-// GET /register
+/* GET /register */
 app.get("/register", (req, res) => {
   if (req.cookies["user_id"]) {
     res.redirect("/urls");
@@ -64,38 +71,7 @@ app.get("/register", (req, res) => {
   res.render("new_user");
 });
 
-/* --- >> POST /register << ---*/
-app.post("/register", (req, res) => {
-  const userID = generateRandomString();
-  const user = {
-    id: userID,
-    email: req.body.email,
-    password: req.body.password,
-  };
-
-  /* check if either field is empty */
-  if (!user.email || !user.password) {
-    res.status(400);
-    res.redirect("/register");
-    return;
-  }
-
-  /* check if users exists already */
-  const alreadyExists = userLookup(user.email);
-  if (alreadyExists) {
-    res.status(400);
-    res.redirect("/register");
-    return;
-  }
-
-  /* create user in database and set a cookie */
-  userDatabase[userID] = user;
-  res.cookie("user_id", userID);
-  res.redirect("/urls");
-  return;
-});
-
-// GET /login
+/* GET /login */
 app.get("/login", (req, res) => {
   if (req.cookies["user_id"]) {
     res.redirect("/urls");
@@ -105,19 +81,52 @@ app.get("/login", (req, res) => {
   res.render("login_page");
 });
 
-// POST /login
+/* ------------------ >> POSTS << ------------------ */
+
+/* --- >> POST /register << --- */
+app.post("/register", (req, res) => {
+  const userID = generateRandomString();
+  const user = {
+    id: userID,
+    email: req.body.email,
+    password: req.body.password,
+  };
+
+  // check if either field is empty
+  if (!user.email || !user.password) {
+    res.status(400);
+    res.redirect("/register");
+    return;
+  }
+
+  // check if users exists already
+  const alreadyExists = userLookup(user.email);
+  if (alreadyExists) {
+    res.status(400);
+    res.redirect("/register");
+    return;
+  }
+
+  // create user in database and set a cookie
+  userDatabase[userID] = user;
+  res.cookie("user_id", userID);
+  res.redirect("/urls");
+  return;
+});
+
+/* --- >> POST /login << --- */
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  /* check if either field is empty */
+  // check if either field is empty
   if (!email || !password) {
     res.status(400);
     res.redirect("/login");
     return;
   }
 
-  /* checking if user exists */
+  // checking if user exists
   const userLookedup = userLookup(email);
   if (!userLookedup) {
     res.status(400);
@@ -125,20 +134,20 @@ app.post("/login", (req, res) => {
     return;
   }
 
-  /* checking if password is correct */
+  // checking if password is correct
   if (userLookedup.password !== password) {
     res.status(400);
     res.redirect("/login");
     return;
   }
 
-  /* logging user in and giving them their cookies */
+  // logging user in and giving them their cookies
   res.cookie("user_id", userLookedup.id);
   res.redirect("/urls");
   return;
 });
 
-// POST /logout
+/* POST /logout */
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
   res.redirect("/login");
@@ -147,7 +156,9 @@ app.post("/logout", (req, res) => {
 
 /* --------------------------------------  General Routes   ------------------------------------------ */
 
-// GET /urls
+/* ------------------ >> GETS << ------------------ */
+
+/* GET /urls */
 app.get("/urls", (req, res) => {
   const userID = req.cookies["user_id"];
 
@@ -155,7 +166,7 @@ app.get("/urls", (req, res) => {
 
   const templateVars = { urls: urls, user: userDatabase[userID] };
 
-  /* checking if a user is logged in */
+  // checking if a user is logged in
   if (!templateVars.user) {
     res.redirect("/login");
     return;
@@ -164,11 +175,11 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
-// GET /urls/new
+/* GET /urls/new */
 app.get("/urls/new", (req, res) => {
   const templateVars = { user: userDatabase[req.cookies["user_id"]] };
 
-  /* checking if a user is logged in */
+  // checking if a user is logged in
   if (!templateVars.user) {
     res.redirect("/login");
     return;
@@ -177,37 +188,15 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
-// POST /urls
-app.post("/urls", (req, res) => {
-  const randomID = generateRandomString();
-  const user = req.cookies["user_id"];
-
-  /* checking if a user is logged in */
-  if (!user) {
-    alert("Not Logged In");
-    res.redirect("/login");
-    return;
-  }
-
-  const newURL = {
-    longURL: req.body.longURL,
-    userID: user,
-  };
-
-  urlDatabase[randomID] = newURL;
-  res.redirect(`/urls/:${randomID}`);
-  return;
-});
-
-// GET /urls/:id
+/* GET /urls/:id */
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
   const urlsList = urlsForUser(userDatabase[req.cookies["user_id"]].id);
 
-  /* checking if the id exists at all, and is visible to the current user */
+  // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
     res.status(404);
-    res.send('404: URL you are looking for does not exist');
+    res.send("404: URL you are looking for does not exist");
     return;
   }
 
@@ -217,7 +206,7 @@ app.get("/urls/:id", (req, res) => {
     user: userDatabase[req.cookies["user_id"]],
   };
 
-  /* checking if a user is logged in */
+  // checking if a user is logged in
   if (!templateVars.user) {
     alert("Not Logged In");
     res.redirect("/login");
@@ -227,7 +216,7 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-// GET /u/:id
+/* GET /u/:id */
 app.get("/u/:id", (req, res) => {
   const templateVars = {
     id: req.params.id,
@@ -244,20 +233,44 @@ app.get("/u/:id", (req, res) => {
   return;
 });
 
-// POST /urls/:id/delete
+/* ------------------ >> POSTS << ------------------ */
+
+/* POST /urls */
+app.post("/urls", (req, res) => {
+  const randomID = generateRandomString();
+  const user = req.cookies["user_id"];
+
+  // checking if a user is logged in
+  if (!user) {
+    alert("Not Logged In");
+    res.redirect("/login");
+    return;
+  }
+
+  const newURL = {
+    longURL: req.body.longURL,
+    userID: user,
+  };
+
+  urlDatabase[randomID] = newURL;
+  res.redirect(`/urls/:${randomID}`);
+  return;
+});
+
+/* POST /urls/:id/delete */
 app.post("/urls/:id/delete", (req, res) => {
   const user = req.cookies["user_id"];
   const id = req.params.id;
 
   const urlsList = urlsForUser(user.id);
-  /* checking if the id exists at all, and is visible to the current user */
+  // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
     res.status(404);
-    res.send('404: URL you are looking for does not exist');
+    res.send("404: URL you are looking for does not exist");
     return;
   }
 
-  /* checking if a user is logged in */
+  // checking if a user is logged in
   if (!user) {
     res.redirect("/login");
     return;
@@ -268,20 +281,20 @@ app.post("/urls/:id/delete", (req, res) => {
   return;
 });
 
-// POST /urls/:id/update
+/* POST /urls/:id/update */
 app.post("/urls/:id/update", (req, res) => {
   const user = req.cookies["user_id"];
   const id = req.params.id;
 
   const urlsList = urlsForUser(user);
-  /* checking if the id exists at all, and is visible to the current user */
+  // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
     res.status(404);
-    res.send('404: URL you are looking for does not exist');
+    res.send("404: URL you are looking for does not exist");
     return;
   }
 
-  /* checking if a user is logged in */
+  // checking if a user is logged in
   if (!user) {
     res.redirect("/login");
     return;
@@ -292,7 +305,7 @@ app.post("/urls/:id/update", (req, res) => {
   return;
 });
 
-// APP IS LISTENING
+/* --- >>  APP IS LISTENING < --- */
 app.listen(PORT, () => {
   console.log(`Tiny App listening on port ${PORT}`);
 });
