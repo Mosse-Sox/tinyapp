@@ -10,6 +10,7 @@
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 
@@ -37,12 +38,12 @@ const userDatabase = {
   Rowan: {
     id: "Rowan",
     email: "Rowan@abc.com",
-    password: "jamjam",
+    password: bcrypt.hashSync("jamjam", 10)
   },
   Donny: {
     id: "Donny",
     email: "Scootydon@jam.ca",
-    password: "Rowan",
+    password: bcrypt.hashSync("Rowan", 10)
   },
 };
 
@@ -89,7 +90,7 @@ app.post("/register", (req, res) => {
   const user = {
     id: userID,
     email: req.body.email,
-    password: req.body.password,
+    password: bcrypt.hashSync(req.body.password, 10)
   };
 
   // check if either field is empty
@@ -135,7 +136,7 @@ app.post("/login", (req, res) => {
   }
 
   // checking if password is correct
-  if (userLookedup.password !== password) {
+  if (!bcrypt.compareSync(password, userLookedup.password)) {
     res.status(400);
     res.redirect("/login");
     return;
