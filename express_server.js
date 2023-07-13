@@ -24,10 +24,12 @@ app.use(morgan("dev"));
 // configs
 app.set("view engine", "ejs");
 
+/* --------------------------------------  Database Objects   ------------------------------------------ */
+
 // object acting as the current URL database
 const urlDatabase = {
-  b2xVn2: "http://www.lighthouselabs.ca",
-  "9sm5xk": "http://www.google.com",
+  b2xVn2: { longURL: "http://www.lighthouselabs.ca", userID: "abc" },
+  "9sm5xk": { longURL: "http://www.google.com", userID: "abc" }
 };
 
 // object acting as the current user database
@@ -44,9 +46,11 @@ const userDatabase = {
   },
 };
 
+/* --------------------------------------  Login Routes   ------------------------------------------ */
+
 // GET / -> redirects to /urls currently
 app.get("/", (req, res) => {
-  res.redirect("/urls");
+  res.redirect("/login");
   return;
 });
 
@@ -88,12 +92,6 @@ app.post("/register", (req, res) => {
   userDatabase[userID] = user;
   res.cookie("user_id", userID);
   res.redirect("/urls");
-  return;
-});
-
-// GET /urls.json
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
   return;
 });
 
@@ -147,6 +145,8 @@ app.post("/logout", (req, res) => {
   return;
 });
 
+/* --------------------------------------  General Routes   ------------------------------------------ */
+
 // GET /urls
 app.get("/urls", (req, res) => {
   const userID = req.cookies["user_id"];
@@ -193,7 +193,7 @@ app.post("/urls", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   const templateVars = {
     id: req.params.id,
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,
     user: userDatabase[req.cookies["user_id"]],
   };
 
@@ -210,7 +210,7 @@ app.get("/urls/:id", (req, res) => {
 app.get("/u/:id", (req, res) => {
   const templateVars = {
     id: req.params.id,
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,
   };
 
   if (!templateVars.longURL) {
@@ -248,7 +248,7 @@ app.post("/urls/:id/update", (req, res) => {
     return;
   }
 
-  urlDatabase[req.params.id] = req.body.newURL;
+  urlDatabase[req.params.id].longURL = req.body.newURL;
   res.redirect(`/urls/${req.params.id}`);
   return;
 });
