@@ -28,20 +28,20 @@ app.set("view engine", "ejs");
 
 // object acting as the current URL database
 const urlDatabase = {
-  b2xVn2: { longURL: "http://www.lighthouselabs.ca", userID: "abc" },
-  "9sm5xk": { longURL: "http://www.google.com", userID: "abc" }
+  b2xVn2: { longURL: "http://www.lighthouselabs.ca", userID: "Rowan" },
+  "9sm5xk": { longURL: "http://www.google.com", userID: "Donny" },
 };
 
 // object acting as the current user database
 const userDatabase = {
-  aay: {
+  Rowan: {
     id: "Rowan",
-    email: "abc@abc.com",
+    email: "Rowan@abc.com",
     password: "jamjam",
   },
-  bee: {
-    id: "Donavon",
-    email: "deh@jam.ca",
+  Donny: {
+    id: "Donny",
+    email: "Scootydon@jam.ca",
     password: "Rowan",
   },
 };
@@ -150,7 +150,10 @@ app.post("/logout", (req, res) => {
 // GET /urls
 app.get("/urls", (req, res) => {
   const userID = req.cookies["user_id"];
-  const templateVars = { urls: urlDatabase, user: userDatabase[userID] };
+
+  const urls = urlsForUser(userID);
+
+  const templateVars = { urls: urls, user: userDatabase[userID] };
 
   /* checking if a user is logged in */
   if (!templateVars.user) {
@@ -178,27 +181,45 @@ app.get("/urls/new", (req, res) => {
 app.post("/urls", (req, res) => {
   const randomID = generateRandomString();
   const user = req.cookies["user_id"];
+
   /* checking if a user is logged in */
   if (!user) {
+    alert("Not Logged In");
     res.redirect("/login");
     return;
   }
 
-  urlDatabase[randomID] = req.body.longURL;
+  const newURL = {
+    longURL: req.body.longURL,
+    userID: user,
+  };
+
+  urlDatabase[randomID] = newURL;
   res.redirect(`/urls/:${randomID}`);
   return;
 });
 
 // GET /urls/:id
 app.get("/urls/:id", (req, res) => {
+  const id = req.params.id;
+  const urlsList = urlsForUser(userDatabase[req.cookies["user_id"]].id);
+
+  /* checking if the id exists at all, and is visible to the current user */
+  if (urlsList[id] === undefined) {
+    res.status(404);
+    res.send('404: URL you are looking for does not exist');
+    return;
+  }
+
   const templateVars = {
-    id: req.params.id,
-    longURL: urlDatabase[req.params.id].longURL,
+    id: id,
+    longURL: urlDatabase[id].longURL,
     user: userDatabase[req.cookies["user_id"]],
   };
 
   /* checking if a user is logged in */
   if (!templateVars.user) {
+    alert("Not Logged In");
     res.redirect("/login");
     return;
   }
@@ -225,16 +246,24 @@ app.get("/u/:id", (req, res) => {
 
 // POST /urls/:id/delete
 app.post("/urls/:id/delete", (req, res) => {
-  console.log(req.params.id);
-  delete urlDatabase[req.params.id];
-
   const user = req.cookies["user_id"];
+  const id = req.params.id;
+
+  const urlsList = urlsForUser(user.id);
+  /* checking if the id exists at all, and is visible to the current user */
+  if (urlsList[id] === undefined) {
+    res.status(404);
+    res.send('404: URL you are looking for does not exist');
+    return;
+  }
+
   /* checking if a user is logged in */
   if (!user) {
     res.redirect("/login");
     return;
   }
 
+  delete urlDatabase[id];
   res.redirect("/urls");
   return;
 });
@@ -242,14 +271,24 @@ app.post("/urls/:id/delete", (req, res) => {
 // POST /urls/:id/update
 app.post("/urls/:id/update", (req, res) => {
   const user = req.cookies["user_id"];
+  const id = req.params.id;
+
+  const urlsList = urlsForUser(user);
+  /* checking if the id exists at all, and is visible to the current user */
+  if (urlsList[id] === undefined) {
+    res.status(404);
+    res.send('404: URL you are looking for does not exist');
+    return;
+  }
+
   /* checking if a user is logged in */
   if (!user) {
     res.redirect("/login");
     return;
   }
 
-  urlDatabase[req.params.id].longURL = req.body.newURL;
-  res.redirect(`/urls/${req.params.id}`);
+  urlDatabase[id].longURL = req.body.newURL;
+  res.redirect(`/urls/${id}`);
   return;
 });
 
@@ -257,6 +296,8 @@ app.post("/urls/:id/update", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Tiny App listening on port ${PORT}`);
 });
+
+/* -------------------------------------- Functions ------------------------------------------ */
 
 /**
  * This function is used in generating new shortURLS and userIds
@@ -274,6 +315,11 @@ const generateRandomString = () => {
   return newString;
 };
 
+/**
+ * This function takes an email and checks the database for that email
+ * @param {*} email
+ * @returns a user if its found, null if no user is found
+ */
 const userLookup = (email) => {
   let userExistsAlready = false;
 
@@ -289,4 +335,21 @@ const userLookup = (email) => {
   }
 
   return null;
+};
+
+/**
+ * This function takes a userID and creates an object containing all the urls for that userID
+ * @param {*} userID
+ * @returns an object that contains all of the urls associated with a specific user
+ */
+const urlsForUser = (userID) => {
+  const urls = {};
+
+  for (const shortURL in urlDatabase) {
+    if (urlDatabase[shortURL].userID === userID) {
+      urls[shortURL] = urlDatabase[shortURL];
+    }
+  }
+
+  return urls;
 };
