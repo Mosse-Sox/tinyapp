@@ -30,7 +30,7 @@
         <tbody>
           <% for (let id in urls) { %>
           <tr>
-            <td><a href="/u/<%=id%>"><%= id %></a></td>
+            <td><a href="/u/<%=id%>" style="color: #4ca333"><%= id %></a></td>
             <td><%= urls[id].longURL %></td>
             <td>
               <form action="/urls/<%=id%>" method="GET">
@@ -50,6 +50,8 @@
           <% } %>
         </tbody>
       </table>
+
+      <a href="/urls/new" style="color: black">Create a New Short Link</a>
     </main>
 
     <!-- Bootstrap JS -->

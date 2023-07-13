@@ -160,17 +160,18 @@ app.post("/logout", (req, res) => {
 
 /* GET /urls */
 app.get("/urls", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const user = req.cookies["user_id"];
 
-  const urls = urlsForUser(userID);
-
-  const templateVars = { urls: urls, user: userDatabase[userID] };
-
-  // checking if a user is logged in
-  if (!templateVars.user) {
+   // checking if a user is logged in
+   if (!user) {
+    res.status(400);
     res.redirect("/login");
     return;
   }
+
+  const urls = urlsForUser(user);
+
+  const templateVars = { urls: urls, user: userDatabase[user] };
 
   res.render("urls_index", templateVars);
 });
@@ -181,6 +182,7 @@ app.get("/urls/new", (req, res) => {
 
   // checking if a user is logged in
   if (!templateVars.user) {
+    res.status(400);
     res.redirect("/login");
     return;
   }
@@ -191,7 +193,16 @@ app.get("/urls/new", (req, res) => {
 /* GET /urls/:id */
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
-  const urlsList = urlsForUser(userDatabase[req.cookies["user_id"]].id);
+  const user = req.cookies["user_id"];
+
+  // checking if a user is logged in
+  if (!user) {
+    res.status(400);
+    res.redirect("/login");
+    return;
+  }
+
+  const urlsList = urlsForUser(userDatabase[user].id);
 
   // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
@@ -203,15 +214,8 @@ app.get("/urls/:id", (req, res) => {
   const templateVars = {
     id: id,
     longURL: urlDatabase[id].longURL,
-    user: userDatabase[req.cookies["user_id"]],
+    user: userDatabase[user],
   };
-
-  // checking if a user is logged in
-  if (!templateVars.user) {
-    alert("Not Logged In");
-    res.redirect("/login");
-    return;
-  }
 
   res.render("urls_show", templateVars);
 });
@@ -225,7 +229,7 @@ app.get("/u/:id", (req, res) => {
 
   if (!templateVars.longURL) {
     res.status(404);
-    res.send("the url you are trying to access does not exist");
+    res.send("404: the url you are trying to access does not exist");
     return;
   }
 
@@ -242,7 +246,7 @@ app.post("/urls", (req, res) => {
 
   // checking if a user is logged in
   if (!user) {
-    alert("Not Logged In");
+    res.status(400);
     res.redirect("/login");
     return;
   }
@@ -262,17 +266,18 @@ app.post("/urls/:id/delete", (req, res) => {
   const user = req.cookies["user_id"];
   const id = req.params.id;
 
+  // checking if a user is logged in
+  if (!user) {
+    res.status(400);
+    res.redirect("/login");
+    return;
+  }
+
   const urlsList = urlsForUser(user.id);
   // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
     res.status(404);
     res.send("404: URL you are looking for does not exist");
-    return;
-  }
-
-  // checking if a user is logged in
-  if (!user) {
-    res.redirect("/login");
     return;
   }
 
@@ -286,17 +291,18 @@ app.post("/urls/:id/update", (req, res) => {
   const user = req.cookies["user_id"];
   const id = req.params.id;
 
+  // checking if a user is logged in
+  if (!user) {
+    res.status(400);
+    res.redirect("/login");
+    return;
+  }
+
   const urlsList = urlsForUser(user);
   // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
     res.status(404);
     res.send("404: URL you are looking for does not exist");
-    return;
-  }
-
-  // checking if a user is logged in
-  if (!user) {
-    res.redirect("/login");
     return;
   }
 
