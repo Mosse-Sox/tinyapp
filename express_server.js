@@ -47,10 +47,16 @@ const userDatabase = {
 // GET / -> redirects to /urls currently
 app.get("/", (req, res) => {
   res.redirect("/urls");
+  return;
 });
 
 // GET /register
 app.get("/register", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect("/urls");
+    return;
+  }
+
   res.render("new_user");
 });
 
@@ -67,6 +73,7 @@ app.post("/register", (req, res) => {
   if (!user.email || !user.password) {
     res.status(400);
     res.redirect("/register");
+    return;
   }
 
   /* check if users exists already */
@@ -74,21 +81,29 @@ app.post("/register", (req, res) => {
   if (alreadyExists) {
     res.status(400);
     res.redirect("/register");
+    return;
   }
 
   /* create user in database and set a cookie */
   userDatabase[userID] = user;
   res.cookie("user_id", userID);
   res.redirect("/urls");
+  return;
 });
 
 // GET /urls.json
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
+  return;
 });
 
 // GET /login
 app.get("/login", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect("/urls");
+    return;
+  }
+
   res.render("login_page");
 });
 
@@ -101,6 +116,7 @@ app.post("/login", (req, res) => {
   if (!email || !password) {
     res.status(400);
     res.redirect("/login");
+    return;
   }
 
   /* checking if user exists */
@@ -108,23 +124,27 @@ app.post("/login", (req, res) => {
   if (!userLookedup) {
     res.status(400);
     res.redirect("/login");
+    return;
   }
 
   /* checking if password is correct */
   if (userLookedup.password !== password) {
     res.status(400);
     res.redirect("/login");
+    return;
   }
 
   /* logging user in and giving them their cookies */
   res.cookie("user_id", userLookedup.id);
   res.redirect("/urls");
+  return;
 });
 
 // POST /logout
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
   res.redirect("/login");
+  return;
 });
 
 // GET /urls
@@ -135,6 +155,7 @@ app.get("/urls", (req, res) => {
   /* checking if a user is logged in */
   if (!templateVars.user) {
     res.redirect("/login");
+    return;
   }
 
   res.render("urls_index", templateVars);
@@ -147,6 +168,7 @@ app.get("/urls/new", (req, res) => {
   /* checking if a user is logged in */
   if (!templateVars.user) {
     res.redirect("/login");
+    return;
   }
 
   res.render("urls_new", templateVars);
@@ -159,10 +181,12 @@ app.post("/urls", (req, res) => {
   /* checking if a user is logged in */
   if (!user) {
     res.redirect("/login");
+    return;
   }
 
   urlDatabase[randomID] = req.body.longURL;
   res.redirect(`/urls/:${randomID}`);
+  return;
 });
 
 // GET /urls/:id
@@ -176,6 +200,7 @@ app.get("/urls/:id", (req, res) => {
   /* checking if a user is logged in */
   if (!templateVars.user) {
     res.redirect("/login");
+    return;
   }
 
   res.render("urls_show", templateVars);
@@ -191,9 +216,11 @@ app.get("/u/:id", (req, res) => {
   if (!templateVars.longURL) {
     res.status(404);
     res.send("the url you are trying to access does not exist");
+    return;
   }
 
   res.redirect(templateVars.longURL);
+  return;
 });
 
 // POST /urls/:id/delete
@@ -205,9 +232,11 @@ app.post("/urls/:id/delete", (req, res) => {
   /* checking if a user is logged in */
   if (!user) {
     res.redirect("/login");
+    return;
   }
 
   res.redirect("/urls");
+  return;
 });
 
 // POST /urls/:id/update
@@ -216,10 +245,12 @@ app.post("/urls/:id/update", (req, res) => {
   /* checking if a user is logged in */
   if (!user) {
     res.redirect("/login");
+    return;
   }
 
   urlDatabase[req.params.id] = req.body.newURL;
   res.redirect(`/urls/${req.params.id}`);
+  return;
 });
 
 // APP IS LISTENING
