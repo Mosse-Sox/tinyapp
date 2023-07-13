@@ -2,15 +2,20 @@
  * This file contains all the current routes and server code.
  * You would run this file to start the server.
  * Variables:
- *        - urlDatabase: object acting as our current database
- * Functions:
- *        - generateRandomString();
+ *        - urlDatabase: object acting as our current url database
+ *        - userDatabase: object acting as our current user database
  */
 
 const express = require("express");
 const cookieSession = require("cookie-session");
 const morgan = require("morgan");
 const bcrypt = require("bcryptjs");
+const {
+  authenticateUser,
+  urlsForUser,
+  generateRandomString,
+  userLookup,
+} = require("./helpers");
 
 const app = express();
 
@@ -48,7 +53,9 @@ app.use((req, res, next) => {
   }
 
   const userFromCookie = userDatabase[idFromCookie];
-  const userLookedup = userFromCookie ? userLookup(userFromCookie.email) : null;
+  const userLookedup = userFromCookie
+    ? userLookup(userFromCookie.email, userDatabase)
+    : null;
   if (!userLookedup && protectedRoutes.includes(req.url)) {
     return res.redirect("/login");
   }
@@ -79,85 +86,6 @@ const userDatabase = {
     email: "Scootydon@jam.ca",
     password: bcrypt.hashSync("Rowan", 10),
   },
-};
-
-/* -------------------------------------- Functions ------------------------------------------ */
-
-/**
- * This function is used in generating new shortURLS and userIds
- * @returns a randomly generated 6 character alphanumeric string
- */
-const generateRandomString = () => {
-  let newString = "";
-
-  const characters = "ABCDEFGHIJKLMNOPQRXYZabcdefghijklmnopqrxyz0123456789";
-
-  for (i = 0; i < 6; i++) {
-    newString += characters[Math.floor(Math.random() * characters.length)];
-  }
-
-  return newString;
-};
-
-/**
- * This function takes an email and checks the database for that email
- * @param {string} email
- * @returns a user if its found, null if no user is found
- */
-const userLookup = (email) => {
-  let userExistsAlready = false;
-
-  for (const userId in userDatabase) {
-    const userThatExistsCurrently = userDatabase[userId];
-    if (userThatExistsCurrently.email === email) {
-      userExistsAlready = true;
-    }
-
-    if (userExistsAlready) {
-      return userThatExistsCurrently;
-    }
-  }
-
-  return null;
-};
-
-/**
- * This function takes a userID and creates an object containing all the urls for that userID
- * @param {string} userID
- * @returns an object that contains all of the urls associated with a specific user
- */
-const urlsForUser = (userID) => {
-  const urls = {};
-
-  for (const shortURL in urlDatabase) {
-    if (urlDatabase[shortURL].userID === userID) {
-      urls[shortURL] = urlDatabase[shortURL];
-    }
-  }
-
-  return urls;
-};
-
-/**
- * This function takes in an email and password that a user attempted to log in with and returns
- * an object with an error if the login was not successful or an object that contains the user object.
- * @param {string} email email the user is attempting to log in with
- * @param {string} password password the user is attempting to log in with
- * @returns An object that contains either a user or an error depending on if the params passed
- * the checks.
- */
-const authenticateUser = (email, password) => {
-  const userLookedup = userLookup(email);
-
-  if (!userLookedup) {
-    return { error: "Login unsuccessful", user: null };
-  }
-
-  if (!bcrypt.compareSync(password, userLookedup.password)) {
-    return { error: "Login unsuccessful", user: null };
-  }
-
-  return { error: null, user: userLookedup };
 };
 
 /* --------------------------------------  Login Routes   ------------------------------------------ */
@@ -209,7 +137,7 @@ app.post("/register", (req, res) => {
   }
 
   // check if users exists already
-  const alreadyExists = userLookup(user.email);
+  const alreadyExists = userLookup(user.email, userDatabase);
   if (alreadyExists) {
     res.status(400);
     return res.redirect("/register");
@@ -233,7 +161,7 @@ app.post("/login", (req, res) => {
     return;
   }
 
-  const { error, user } = authenticateUser(email, password);
+  const { error, user } = authenticateUser(email, password, userDatabase);
 
   if (error) {
     return res.send(error);
@@ -259,7 +187,7 @@ app.post("/logout", (req, res) => {
 app.get("/urls", (req, res) => {
   const userId = req.session.id;
 
-  const urls = urlsForUser(userId);
+  const urls = urlsForUser(userId, urlDatabase);
 
   const templateVars = { urls: urls, user: userDatabase[userId] };
 
@@ -273,12 +201,27 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
+/* POST /urls */
+app.post("/urls", (req, res) => {
+  const randomID = generateRandomString();
+  const user = req.session.id;
+
+  const newURL = {
+    longURL: req.body.longURL,
+    userID: user,
+  };
+
+  urlDatabase[randomID] = newURL;
+  res.redirect(`/urls/${randomID}`);
+  return;
+});
+
 /* GET /urls/:id */
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
   const user = req.session.id;
 
-  const urlsList = urlsForUser(userDatabase[user].id);
+  const urlsList = urlsForUser(userDatabase[user].id, urlDatabase);
 
   // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
@@ -315,27 +258,12 @@ app.get("/u/:id", (req, res) => {
 
 /* ------------------ >> POSTS << ------------------ */
 
-/* POST /urls */
-app.post("/urls", (req, res) => {
-  const randomID = generateRandomString();
-  const user = req.session.id;
-
-  const newURL = {
-    longURL: req.body.longURL,
-    userID: user,
-  };
-
-  urlDatabase[randomID] = newURL;
-  res.redirect(`/urls/:${randomID}`);
-  return;
-});
-
 /* POST /urls/:id/delete */
 app.post("/urls/:id/delete", (req, res) => {
   const user = req.session.id;
   const id = req.params.id;
 
-  const urlsList = urlsForUser(user);
+  const urlsList = urlsForUser(user, urlDatabase);
   // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
     res.status(404);
@@ -353,7 +281,7 @@ app.post("/urls/:id/update", (req, res) => {
   const user = req.session.id;
   const id = req.params.id;
 
-  const urlsList = urlsForUser(user);
+  const urlsList = urlsForUser(user, urlDatabase);
   // checking if the id exists at all, and is visible to the current user
   if (urlsList[id] === undefined) {
     res.status(404);
