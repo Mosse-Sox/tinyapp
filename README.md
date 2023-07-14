@@ -2,7 +2,7 @@
 
 ### Turn your super long urls, super short.
 
-This apps main purpose is to shorten URLS to share them across the web. Something like `https://www.google.com/search?q=beans&oq=beans&aqs=chrome..69i57.239693308j0j15&sourceid=chrome&ie=UTF-8` into something like this `www.tinyapp.com/u/abcxyz`.
+This apps main purpose is to shorten URLS to share them across the web. Something like `https://www.google.com/searchq=beans&oq=beans&aqs=chrome..69i57.239693308j0j15&sourceid=chrome&ie=UTF-8` into something like this `www.tinyapp.com/u/abcxyz`.
 
 ## Final Product
 
