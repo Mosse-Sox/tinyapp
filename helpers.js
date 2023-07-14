@@ -19,6 +19,7 @@ const generateRandomString = () => {
 /**
  * This function takes an email and checks the database for that email
  * @param {string} email
+ * @param {object} userDatabase
  * @returns a user if its found, null if no user is found
  */
 const userLookup = (email, userDatabase) => {

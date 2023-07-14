@@ -45,10 +45,9 @@ app.use((req, res, next) => {
     "/urls/:id/delete",
   ];
 
-  console.log(req.session.id);
   const idFromCookie = req.session.id;
 
-  if (!idFromCookie && req.url !== "/login") {
+  if (!idFromCookie && req.url !== "/login" && req.url !== "/register") {
     return res.redirect("/login");
   }
 
