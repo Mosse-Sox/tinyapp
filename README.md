@@ -4,6 +4,12 @@
 
 This apps main purpose is to shorten URLS to share them across the web. Something like `https://www.google.com/search?q=beans&oq=beans&aqs=chrome..69i57.239693308j0j15&sourceid=chrome&ie=UTF-8` into something like this `www.tinyapp.com/u/abcxyz`.
 
+
+## Final Product 
+
+!["users home page"](https://github.com/Mosse-Sox/tinyapp/blob/master/user-home-page.png?raw=true)
+!["short url details page"](https://github.com/Mosse-Sox/tinyapp/blob/master/short-link-info-page.png?raw=true)
+
 - ## Key Features:
   - Authentication with encrypted cookies and hashed passwords
   - Protected routes, everytime a request is made, a check is made to make sure the person making the request is authorized to do so
