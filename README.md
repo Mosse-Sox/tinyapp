@@ -6,7 +6,7 @@ This apps main purpose is to shorten URLS to share them across the web. Somethin
 
 
 ## Final Product 
-
+##### (screenshots show website in darkmode)
 !["users home page"](https://github.com/Mosse-Sox/tinyapp/blob/master/user-home-page.png?raw=true)
 !["short url details page"](https://github.com/Mosse-Sox/tinyapp/blob/master/short-link-info-page.png?raw=true)
 
